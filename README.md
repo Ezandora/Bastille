@@ -12,7 +12,7 @@ Will require [a recent build of KoLMafia](http://builds.kolmafia.us/job/Kolmafia
 
 Usage
 ----------------
-Type "bastille help" into the graphical CLI, or select Scripts>bastille.ash from the menu, and type in "help". 
+Type "bastille help" into the graphical CLI, or select Scripts>bastille.ash from the menu, and type in "help".  
 There's also a relay override, which you can see by using the bastille item.
 
 Screenshot
