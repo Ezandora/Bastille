@@ -4843,7 +4843,7 @@ string HTMLGenerateElementSpanDesaturated(element e)
     return HTMLGenerateElementSpanDesaturated(e, "");
 }
 
-string __bastille_version = "1.0";
+string __bastille_version = "1.0.1";
 
 Record BastilleState
 {
@@ -4895,7 +4895,7 @@ void BastilleStateParse(string page_text, boolean from_relay)
 	
 	state.last_stats_seen = get_property("_lastBastilleStatsSeen").split_string_alternate(",").listConvertToInt();
 	
-	state.current_choice_adventure_id = choiceOverrideDiscoverChoiceIDFromPageText(page_text);
+	state.current_choice_adventure_id = choiceOverrideDiscoverChoiceIDFromPageText(page_text.to_buffer());
 	foreach key in needle_matches
 	{
 		int top = needle_matches[key][1].to_int();
