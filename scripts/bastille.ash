@@ -4843,7 +4843,7 @@ string HTMLGenerateElementSpanDesaturated(element e)
     return HTMLGenerateElementSpanDesaturated(e, "");
 }
 
-string __bastille_version = "1.0.1";
+string __bastille_version = "1.0.2";
 
 Record BastilleState
 {
@@ -4855,6 +4855,8 @@ Record BastilleState
 	int current_choice_adventure_id;
 };
 
+//WARNING: this is inaccurate
+int [int] __needle_minimum_possible_value = {0:120, 1:120, 2:120, 3:237, 4:237, 5:237};
 
 BastilleState __bastille_state;
 

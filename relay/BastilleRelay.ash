@@ -1,6 +1,6 @@
 import "scripts/bastille.ash";
 
-boolean __setting_display_inaccurate_data = my_id() == 1557284 && false;
+boolean __setting_display_inaccurate_data = my_id() == 1557284 && true;
 
 
 
@@ -70,6 +70,48 @@ float calculateAverageCheeseGained(CheeseDataEntry [int] cheese_data, string but
 	if (average_cheese_count != 0)
 		average_cheese_gained /= to_float(average_cheese_count);
 	__hack_average_cheese_samples = average_cheese_count;
+	
+	
+	if (average_cheese_count == 0 && relevant_stat_index != -1)
+	{
+		average_cheese_gained = 0.0;
+		//Simple linear regression:
+		float x_sum = 0.0;
+		float y_sum = 0.0;
+		float xy_sum = 0.0;
+		float x_squared_sum = 0.0;
+		float y_squared_sum = 0.0;
+		float n = 0.0;
+		foreach key, entry in cheese_data
+		{
+			if (entry.name != button_text) continue;
+			if (entry.relevant_stat_value <= 0.0) continue;
+			
+			float x = entry.relevant_stat_value;
+			float y = entry.cheese_gained;
+			
+			x_sum += x;
+			y_sum += y;
+			xy_sum += x * y;
+			x_squared_sum += x * x;
+			y_squared_sum += y * y;
+			n += 1;
+		}
+		float a = y_sum * x_squared_sum - x_sum * xy_sum;
+		float denom = n * x_squared_sum - x_sum * x_sum;
+		if (denom != 0.0)
+			a /= denom;
+		else
+			return 0.0;
+		float b = n * xy_sum - x_sum * y_sum;
+		denom = n * x_squared_sum - x_sum * x_sum;
+		if (denom != 0.0)
+			b /= denom;
+		else
+			return 0.0;
+		
+		average_cheese_gained = b * __bastille_state.stats[relevant_stat_index] + a;
+	}
 	return average_cheese_gained;
 }
 
@@ -319,8 +361,6 @@ void handleBastille(string page_text)
 	CheeseDataEntry [int] cheese_data;
 	file_to_map("Bastille Cheese Data.txt", cheese_data);
 	
-	//WARNING: this is inaccurate
-	int [int] minimum_possible_value = {0:121, 1:121, 2:121, 3:239, 4:239, 5:239};
 	
 	//string [int][int] needle_matches = page_text.group_string("<img style='position: absolute; top: ([0-9]+); left: ([0-9]+);'");
 	int total_delta = 0;
@@ -333,7 +373,7 @@ void handleBastille(string page_text)
 	int [int] stats_approximate_deltas;
 	foreach stat_id, stat_value in __bastille_state.stats
 	{
-		int delta = stat_value - minimum_possible_value[stat_id];
+		int delta = stat_value - __needle_minimum_possible_value[stat_id];
 		total_delta += delta;
 		if (stat_id >= 0 && stat_id <= 2) total_attack_modifiers += delta;
 		if (stat_id >= 3 && stat_id <= 5) total_defence_modifiers += delta;
@@ -400,29 +440,36 @@ void handleBastille(string page_text)
 					relative_value = -100000;
 					bad = true;
 				}
-			
-				if (bad)
-					extra_text.append("<span style=\"color:red;\">");
-				else
-					extra_text.append("<span style=\"color:green;\">");
-				extra_text.append(absolute_value);
-				if (!bad)
-					extra_text.append("</span>");
-				extra_text.append(" (");
-				if (direction < 0)
-					extra_text.append("<span style=\"color:red;\">");
-				extra_text.append(relative_value);
-				if (direction < 0)
-					extra_text.append("</span>");
-				extra_text.append(")");
-				if (bad)
-					extra_text.append("</span>");
+				
+				if (my_id() == 1557284 && true)
+				{
+					if (bad)
+						extra_text.append("<span style=\"color:red;\">");
+					else
+						extra_text.append("<span style=\"color:green;\">");
+					extra_text.append(absolute_value);
+					if (!bad)
+						extra_text.append("</span>");
+					extra_text.append(" (");
+					if (direction < 0)
+						extra_text.append("<span style=\"color:red;\">");
+					extra_text.append(relative_value);
+					if (direction < 0)
+						extra_text.append("</span>");
+					extra_text.append(")");
+					if (bad)
+						extra_text.append("</span>");
+				}
 			}
 			if (page_text.contains_text("Cheese Seeking Behavior"))
 			{
 				float cheese_gained = calculateAverageCheeseGained(cheese_data, button_text);
 				if (cheese_gained != 0.0)
-					extra_text.append(" ~" + cheese_gained.round() + " cheese gained (" + __hack_average_cheese_samples + " samples)");
+				{
+					extra_text.append(" ~" + cheese_gained.round() + " cheese gained");
+					if (my_id() == 1557284 && true)
+						extra_text.append(" (" + __hack_average_cheese_samples + " samples)");
+				}
 			}
 		}
 	}
