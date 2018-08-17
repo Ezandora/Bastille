@@ -341,9 +341,17 @@ void layoutBastilleOptions(string page_text, buffer extra_text, boolean allow_ch
 
 void handleBastille(string page_text)
 {
+	BastilleStateParse(page_text, true);
+	
 	buffer extra_text;
 	buffer extra_top_text;
 	//write(page_text);
+	
+	if (__bastille_state.current_choice_adventure_id <= 0)
+	{
+		write(page_text);
+		return;
+	}
 	
 	PageAddCSSClass("", "bastille_button", "padding-top:5px;padding-bottom:5px;border-radius:5px;text-align:center;");
 	PageAddCSSClass("", "bastille_table_cell_button", "display:table-cell;text-align:center;vertical-align:middle;width:25%;");
@@ -355,7 +363,6 @@ void handleBastille(string page_text)
 	extra_top_text.append("<script type=\"text/javascript\" src=\"BastilleRelay.js\"></script>");
 	
 	
-	BastilleStateParse(page_text, true);
 	layoutBastilleOptions(page_text, extra_text, __bastille_state.current_choice_adventure_id == 1313);
 	
 	CheeseDataEntry [int] cheese_data;
@@ -482,6 +489,10 @@ void handleBastille(string page_text)
 		extra_text.append("<br>");
 		extra_text.append("Castle: " + last_image);
 	}
+	if (__bastille_state.current_choice_adventure_id != 1313)
+	{
+		extra_text.append("<div class=\"bastille_button bastille_button_selectable\" style=\"font-size:1.5em;font-weight:bold;padding:10px;\" onclick=\"bastilleCollectRewardsButtonClicked();\">Finish Game (and lose)</div>");
+	}
 	
 	//extra_text.append("<br>Choice #" + __bastille_state.current_choice_adventure_id);
 	
@@ -489,7 +500,11 @@ void handleBastille(string page_text)
 	
 	
 	string new_page_text = page_text.replace_string("</center></td></tr></table>", extra_text + "</center></td></tr></table>");
-	new_page_text = new_page_text.replace_string("<table><tr><td><Center>", "<table><tr><td><Center>" + extra_top_text);
+	
+	if (new_page_text.contains_text("<table><tr><td><Center>"))
+		new_page_text = new_page_text.replace_string("<table><tr><td><Center>", "<table><tr><td><Center>" + extra_top_text);
+	else
+		new_page_text = new_page_text.replace_string("<table><tr><td><center>", "<table><tr><td><center>" + extra_top_text);
 	
 	write(new_page_text);
 }

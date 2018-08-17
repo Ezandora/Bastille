@@ -231,3 +231,106 @@
 230	Rob the suburb	5	128	128
 231	Try the wall thing	1	247	147
 232	Raid the cave	2	131	147
+233	Let the cheese horse in	4	247	66
+234	Have the cheese contest	5	240	93
+235	Enter the childrens' art contest	7	123	114
+236	Put on the bad art show	8	240	112
+237	Put on the bad art show	1	243	83
+238	Submit embarrassing catapult photos	2	124	99
+239	Rob the suburb	4	130	140
+240	Raid the cave	5	130	149
+241	Have the cheese contest	7	243	114
+242	Enter the childrens' art contest	8	130	60
+243	Let the cheese horse in	10	244	79
+244	Stand in the waterfall	11	239	120
+245	Enter the Weakest Army competition	1	124	101
+246	Have the cheese contest	2	249	154
+247	Convert the barracks	4	243	112
+248	Use the wishing well	5	?	-10
+249	Raid the cave	7	124	109
+250	Try the wall thing	8	249	165
+251	Rob the suburb	10	128	124
+252	Submit embarrassing catapult photos	11	123	116
+253	Rob the suburb	1	123	91
+254	Convert the barracks	2	247	136
+255	Stand in the waterfall	4	247	57
+256	Try the wall thing	5	247	153
+257	Grab the boulder	7	?	102
+258	Enter the childrens' art contest	8	123	111
+259	Have the cheese contest	10	240	88
+260	Raid the cave	11	128	132
+261	Stand in the waterfall	1	239	123
+262	Try the wall thing	2	239	84
+263	Submit embarrassing catapult photos	4	120	138
+264	Convert the barracks	5	247	141
+265	Have the cheese contest	1	247	149
+266	Try the wall thing	2	245	131
+267	Use the wishing well	4	?	-10
+268	Rob the suburb	5	128	128
+269	Enter the Weakest Army competition	7	126	87
+270	Scrape out the mine	8	?	51
+271	Submit embarrassing catapult photos	10	124	96
+272	Raid the cave	11	126	103
+273	Try the wall thing	1	245	127
+274	Shoot the glacier	2	124	101
+275	Have the cheese contest	4	247	130
+276	Submit embarrassing catapult photos	5	124	98
+277	Raid the cave	7	126	114
+278	Enter the childrens' art contest	8	128	69
+279	Have the cheese contest	1	247	138
+280	Grab the boulder	4	?	97
+281	Use the wishing well	5	?	-10
+282	Submit embarrassing catapult photos	7	124	101
+283	Let the cheese horse in	8	243	95
+284	Convert the barracks	10	243	109
+285	Enter the childrens' art contest	11	128	70
+286	Convert the barracks	2	243	105
+287	Rob the suburb	4	128	119
+288	Shoot the glacier	5	124	103
+289	Try the wall thing	7	245	130
+290	Submit embarrassing catapult photos	8	124	106
+291	Have the cheese contest	1	247	141
+292	Convert the barracks	2	243	116
+293	Enter the Weakest Army competition	4	126	90
+294	Enter the childrens' art contest	5	128	74
+295	Stand in the waterfall	1	245	68
+296	Convert the barracks	2	243	112
+297	Have the cheese contest	4	247	139
+298	Submit embarrassing catapult photos	5	124	97
+299	Shoot the glacier	7	124	98
+300	Use the wishing well	8	?	-10
+301	Try the wall thing	10	245	122
+302	Grab the boulder	11	?	90
+303	Convert the barracks	1	243	117
+304	Try the wall thing	2	245	119
+305	Rob the suburb	4	128	138
+306	Shoot the glacier	5	124	100
+307	Stand in the waterfall	7	245	67
+308	Have the cheese contest	8	247	148
+309	Convert the barracks	1	243	102
+310	Rob the suburb	2	128	137
+311	Try the wall thing	4	245	127
+312	Submit embarrassing catapult photos	5	124	98
+313	Raid the cave	7	126	103
+314	Grab the boulder	8	?	103
+315	Raid the cave	1	126	101
+316	Rob the suburb	2	128	121
+317	Have the cheese contest	5	247	141
+318	Rob the suburb	1	128	132
+319	Have the cheese contest	2	247	139
+320	Grab the boulder	4	?	101
+321	Shoot the glacier	5	124	96
+322	Convert the barracks	6	243	109
+323	Try the wall thing	7	245	118
+324	Submit embarrassing catapult photos	10	124	105
+325	Raid the cave	11	126	110
+326	Stand in the waterfall	1	245	77
+327	Try the wall thing	2	245	127
+328	Convert the barracks	4	243	107
+329	Have the cheese contest	5	247	146
+330	Rob the suburb	7	128	131
+331	Use the wishing well	8	?	-10
+332	Scrape out the mine	1	?	49
+333	Use the wishing well	2	?	293
+334	Enter the childrens' art contest	4	128	73
+335	Put on the bad art show	5	247	59

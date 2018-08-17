@@ -2238,6 +2238,8 @@ static
     int PATH_LIVE_ASCEND_REPEAT = 31;
     int PATH_POCKET_FAMILIARS = 32;
     int PATH_G_LOVER = 33;
+    int PATH_DISGUISES_DELIMIT = 34;
+    int PATH_DEMIGUISE = 34;
 }
 
 int __my_path_id_cached = -11;
@@ -2309,6 +2311,8 @@ int my_path_id()
         __my_path_id_cached = PATH_POCKET_FAMILIARS;
     else if (path_name == "G-Lover" || path_name == "33")
         __my_path_id_cached = PATH_G_LOVER;
+    else if (path_name == "Disguises Delimit" || path_name == 34)
+    	__my_path_id_cached = PATH_DISGUISES_DELIMIT;
     else
         __my_path_id_cached = PATH_UNKNOWN;
     return __my_path_id_cached;
@@ -4843,7 +4847,7 @@ string HTMLGenerateElementSpanDesaturated(element e)
     return HTMLGenerateElementSpanDesaturated(e, "");
 }
 
-string __bastille_version = "1.0.2";
+string __bastille_version = "1.0.3";
 
 Record BastilleState
 {
@@ -4856,7 +4860,7 @@ Record BastilleState
 };
 
 //WARNING: this is inaccurate
-int [int] __needle_minimum_possible_value = {0:120, 1:120, 2:120, 3:237, 4:237, 5:237};
+int [int] __needle_minimum_possible_value = {0:120, 1:120, 2:120, 3:235, 4:235, 5:235};
 
 BastilleState __bastille_state;
 
@@ -5045,6 +5049,7 @@ void main(string arguments)
 		print_html("Usage: bastille [game configuration] - plays through a single game of bastille and collects the rewards. Not suitable for leaderboarding.");
 		print_html("");
 		print_html("Configuration options:");
+		print_html("<b>mainstat</b> - Chooses all three mainstat options.");
 		print_html("<b>muscle</b> - Chooses all three muscle options.");
 		print_html("<b>myst</b> - Chooses all three myst options.");
 		print_html("<b>moxie</b> - Chooses all three moxie options.");
@@ -5103,19 +5108,19 @@ void main(string arguments)
 			desired_configuration["moat"] = 2;
 		else if (word == "truth" || word == "serum")
 			desired_configuration["moat"] = 3;
-		else if (word == "muscle")
+		else if (word == "muscle" || (word == "mainstat" && my_primestat() == $stat[muscle]))
 		{
 			desired_configuration["barb"] = 2;
 			desired_configuration["bridge"] = 1;
 			desired_configuration["holes"] = 1;
 		}
-		else if (word == "myst" || word == "mysticality")
+		else if (word == "myst" || word == "mysticality" || (word == "mainstat" && my_primestat() == $stat[mysticality]))
 		{
 			desired_configuration["barb"] = 1;
 			desired_configuration["bridge"] = 2;
 			desired_configuration["holes"] = 2;
 		}
-		else if (word == "moxie")
+		else if (word == "moxie" || (word == "mainstat" && my_primestat() == $stat[moxie]))
 		{
 			desired_configuration["barb"] = 3;
 			desired_configuration["bridge"] = 3;
