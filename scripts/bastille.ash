@@ -1231,6 +1231,15 @@ int [int] listCopy(int [int] l)
     return result;
 }
 
+item [int] listCopy(item [int] l)
+{
+    item [int] result;
+    foreach key in l
+        result[key] = l[key];
+    return result;
+}
+
+
 monster [int] listCopy(monster [int] l)
 {
     monster [int] result;
@@ -1776,6 +1785,12 @@ string [int] split_string_alternate(string source, string delimiter)
         return listMakeBlankString();
     return split_string_mutable(source, delimiter);
 }
+string [int] split_string_alternate_immutable(string source, string delimiter)
+{
+    if (source.length() == 0)
+        return listMakeBlankString();
+    return split_string(source, delimiter);
+}
 
 string slot_to_string(slot s)
 {
@@ -1812,10 +1827,17 @@ string slot_to_plural_string(slot s)
     return s.slot_to_string();
 }
 
-
 string format_today_to_string(string desired_format)
 {
     return format_date_time("yyyyMMdd", today_to_string(), desired_format);
+    //We tried this, and instead at 7:51AM local time, it claimed the day was yesterday. I don't get it either.
+    //return format_date_time("yyyyMMdd hh:mm:ss z", today_to_string() + " " + time_to_string(), desired_format);
+}
+//this messes with your timezone, because why wouldn't it?
+string format_intraday_time_to_string(string desired_format)
+{
+    //return format_date_time("hh:mm:ss z", time_to_string(), desired_format);
+    return format_date_time("hh:mm:ss", time_to_string(), desired_format); //omit time zone, because give it a time zone and suddenly it decides to be Difficult.
 }
 
 
@@ -1978,252 +2000,51 @@ This implementation is not 1:1 compatible, as it doesn't take into account your 
 //int [item] get_ingredients_fast(item it)
 
 
-static
+Record Recipe
 {
-    int [item][item] __item_ingredients;
-    boolean [item] __item_is_purchasable_from_a_store;
-}
-
-
-
-boolean parseDatafileItem(int [item] out, string item_name)
-{
-    if (item_name == "") return false;
-    
-    item it = item_name.to_item();
-    if (it != $item[none])
-    {
-        out[it] += 1;
-    }
-    else if (item_name.contains_text("("))
-    {
-        //Do complicated parsing.
-        //NOTE: "CRIMBCO Employee Handbook (chapter 1)" and "snow berries (7)" are both valid entries that mean different things.
-        string [int][int] matches = item_name.group_string("(.*?) \\(([0-9]*)\\)");
-        if (matches[0].count() == 3)
-        {
-            it = matches[0][1].to_item();
-            int amount = matches[0][2].to_int();
-            if (it != $item[none] && amount > 0)
-            {
-                out[it] += amount;
-            }
-        }
-    }
-    return true;
-}
-
-
-Record ConcoctionMapEntry
-{
-    //Only way I know how to parse this file with file_to_map. string [int] won't work, string [string] won't...
-    string craft_type;
-    string mixing_item_1;
-    string mixing_item_2;
-    string mixing_item_3;
-    string mixing_item_4;
-    string mixing_item_5;
-    string mixing_item_6;
-    string mixing_item_7;
-    string mixing_item_8;
-    string mixing_item_9;
-    string mixing_item_10;
-    string mixing_item_11;
-    string mixing_item_12;
-    string mixing_item_13;
-    string mixing_item_14;
-    string mixing_item_15;
-    string mixing_item_16;
-    string mixing_item_17;
-    string mixing_item_18;
+	item creating_item;
+	string type;
+	int [item] source_items;
+	
+	Coinmaster source_coinmaster;
+	
+	string coinmaster_row_id;
 };
 
-void parseConcoction(int [item] ingredients, ConcoctionMapEntry c)
+static
 {
-    //If this ever shows up somewhere, please understand, it's not my fault file_to_map works this way.
-    if (!parseDatafileItem(ingredients, c.mixing_item_1))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_2))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_3))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_4))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_5))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_6))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_7))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_8))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_9))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_10))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_11))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_12))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_13))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_14))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_15))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_16))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_17))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_18))
-        return;
+	Recipe [item][int] __item_recipes;
+	
+    boolean [item] __item_is_purchasable_from_a_store;
+    boolean [item] __items_that_craft_food;
 }
 
-void initialiseItemIngredients()
+Recipe [int] recipes_for_item(item it)
 {
-    if (__item_ingredients.count() > 0) return;
-    
-    //Parse concoctions:
-    //Highest observed so far: 17.
-    if (true)
-    {
-        string [string, string, string, string, string, string, string, string, string, string, string, string, string, string, string, string, string, string, string] concoctions_map_2;
-        file_to_map("data/concoctions.txt", concoctions_map_2);
-        foreach crafting_thing, crafting_type, mixing_item_1, mixing_item_2, mixing_item_3, mixing_item_4, mixing_item_5, mixing_item_6, mixing_item_7, mixing_item_8, mixing_item_9, mixing_item_10, mixing_item_11, mixing_item_12, mixing_item_13, mixing_item_14, mixing_item_15, mixing_item_16, mixing_item_17, mixing_item_18 in concoctions_map_2
-        {
-            if (crafting_type == "SUSHI" || crafting_type == "VYKEA") continue; //not really items
-            if (crafting_type == "CLIPART") continue; //bucket of wine is not made of three turtle totems
-            item it = crafting_thing.to_item();
-            if (it == $item[none])
-            {
-                int [item] item_results;
-                parseDatafileItem(item_results, crafting_thing);
-                if (item_results.count() == 0)
-                {
-                    //print_html("Unknown crafting_thing " + crafting_thing);
-                    continue;
-                }
-                foreach it2 in item_results
-                    it = it2;
-            }
-            if (crafting_type.contains_text("ROW"))
-                __item_is_purchasable_from_a_store[it] = true;
-            if (__item_ingredients contains it) continue; //mafia uses first defined entry
-            
-            int [item] ingredients;
-            //Create map entry:
-            ConcoctionMapEntry c;
-            c.craft_type = crafting_type;
-            c.mixing_item_1 = mixing_item_1;
-            c.mixing_item_2 = mixing_item_2;
-            c.mixing_item_3 = mixing_item_3;
-            c.mixing_item_4 = mixing_item_4;
-            c.mixing_item_5 = mixing_item_5;
-            c.mixing_item_6 = mixing_item_6;
-            c.mixing_item_7 = mixing_item_7;
-            c.mixing_item_8 = mixing_item_8;
-            c.mixing_item_9 = mixing_item_9;
-            c.mixing_item_10 = mixing_item_10;
-            c.mixing_item_11 = mixing_item_11;
-            c.mixing_item_12 = mixing_item_12;
-            c.mixing_item_13 = mixing_item_13;
-            c.mixing_item_14 = mixing_item_14;
-            c.mixing_item_15 = mixing_item_15;
-            c.mixing_item_16 = mixing_item_16;
-            c.mixing_item_17 = mixing_item_17;
-            c.mixing_item_18 = mixing_item_18;
-            
-            parseConcoction(ingredients, c);
-            
-            if (ingredients.count() > 0)
-                __item_ingredients[it] = ingredients;
-        }
-    }
-    else
-    {
-        //Not compatible.
-        //Concoction manager seems to read the first entry, not the second. file_to_map reads the second. Example: spooky wad.
-        //Or maybe it's just random which the concoction manager uses? Example: bloody beer vs. spooky wad. Or it picks the one we can make...?
-        ConcoctionMapEntry [string] concoctions_map;
-        file_to_map("data/concoctions.txt", concoctions_map);
-        foreach crafting_thing in concoctions_map
-        {
-            ConcoctionMapEntry c = concoctions_map[crafting_thing];
-            item it = crafting_thing.to_item();
-            if (it == $item[none])
-                continue;
-            
-            int [item] ingredients;
-            
-            parseConcoction(ingredients, c);
-            
-            if (__item_ingredients contains it) continue; //mafia uses first defined entry
-            if (ingredients.count() > 0)
-                __item_ingredients[it] = ingredients;
-        }
-    }
-    //Parse coinmasters:
-    
-    /*Record CoinmastersMapEntry
-    {
-        string buy_or_sell_type;
-        int amount;
-        item it;
-        string row_id;
-    };
-    CoinmastersMapEntry [string] coinmasters_map;*/
-    string [string,string,int,string] coinmasters_map;
-    file_to_map("data/coinmasters.txt", coinmasters_map);
-    //print_html("coinmasters_map = " + coinmasters_map.to_json());
-    foreach master_name, type, amount, item_string in coinmasters_map
-    {
-        //FIXME track if coinmaster is accessible?
-        //print_html(master_name + ", " + type + ", " + amount + ", " + item_string);
-        if (type != "buy") continue;
-        coinmaster c = master_name.to_coinmaster();
-        if (c == $coinmaster[none])
-        {
-            //Hmm....
-            //print_html(master_name + " is not a coinmaster");
-            continue;
-        }
-        if (c.item == $item[none]) //bat-fabricator
-            continue;
-        item it = item_string.to_item();
-        if (it == $item[none])
-        {
-            //peppermint tailings (10) at the moment
-            //FIXME write this
-            continue;
-        }
-        
-        if (it == $item[none])
-            continue;
-        
-        __item_is_purchasable_from_a_store[it] = true;
-        if (__item_ingredients contains it) continue;
-        
-        int [item] ingredients;
-        ingredients[c.item] = amount;
-        __item_ingredients[it] = ingredients;
-    }
-    
+	return __item_recipes[it];
 }
 
+Recipe recipe_for_item(item it)
+{
+	if (__item_recipes[it].count() == 0)
+	{
+		Recipe blank;
+        return blank;
+	}
+	return __item_recipes[it][0];
+}
 
 int [item] get_ingredients_fast(item it)
 {
-    //return it.get_ingredients();
-    if (__item_ingredients.count() == 0)
-        initialiseItemIngredients();
-    if (!(__item_ingredients contains it))
-    {
-        //This is six milliseconds per call, but only if the item has an ingredient(?), so be wary:
-        int [item] ground_truth = it.get_ingredients();
-        if (ground_truth.count() > 0) //We could cache it if it's empty, except sometimes that changes.
-            __item_ingredients[it] = ground_truth;
-    }
-    return __item_ingredients[it];
+	Recipe [int] recipes = __item_recipes[it];
+	if (recipes.count() == 0)
+	{
+		//use get_ingredient?
+        //mafia appears to have various items that return get_ingredients but do not show up in the datafiles
+        int [item] mafia_response = it.get_ingredients();
+        return mafia_response;
+	}
+	return recipes[0].source_items;
 }
 
 boolean item_is_purchasable_from_a_store(item it)
@@ -2237,10 +2058,194 @@ boolean item_cannot_be_asdon_martined_because_it_was_purchased_from_a_store(item
 	return it.item_is_purchasable_from_a_store();
 }
 
+
+
+//Initialisation code, ignore:
+boolean parseDatafileItem(int [item] out, string item_name)
+{
+    if (item_name == "") return false;
+    
+    item it = item_name.to_item();
+    if (it != $item[none])
+    {
+        out[it] += 1;
+    }
+    else if (item_name.contains_text("("))
+    {
+        //Do complicated parsing.
+        //NOTE: "CRIMBCO Employee Handbook (chapter 1)" and "snow berries (7)" are both valid entries that mean different things.
+        //optional space between the item name and parenthesis because the CRIMBO12 items (BittyCar MeatCar) have no space there
+        string [int][int] matches = item_name.group_string("(.*?)[ ]*\\(([0-9]*)\\)");
+        if (matches[0].count() == 3)
+        {
+            it = matches[0][1].to_item();
+            if (it == $item[none]) return false;
+            int amount = matches[0][2].to_int();
+            if (amount > 0)
+            {
+                out[it] += amount;
+            }
+            else
+            	return false;
+        }
+    }
+    return true;
+}
+
+
+void InternalAddRecipe(Recipe r)
+{
+	if (!(__item_recipes contains r.creating_item))
+	{
+		Recipe [int] blank;
+        __item_recipes[r.creating_item] = blank;
+	}
+	__item_recipes[r.creating_item][__item_recipes[r.creating_item].count()] = r;
+	if (r.type == "COOK" || r.type == "COOK_FANCY")
+    {
+    	foreach it in r.source_items
+        	__items_that_craft_food[it] = true;
+    }
+}
+
+void InternalParseConcoctionEntry(string entry)
+{
+	string [int] split_entry = entry.split_string_alternate_immutable("\t");
+	//crafting_thing, crafting_type, mixing_item_1, mixing_item_2, mixing_item_3, mixing_item_4, mixing_item_5, mixing_item_6, mixing_item_7, mixing_item_8, mixing_item_9, mixing_item_10, mixing_item_11, mixing_item_12, mixing_item_13, mixing_item_14, mixing_item_15, mixing_item_16, mixing_item_17, mixing_item_18
+	if (split_entry.count() < 3) return;
+	Recipe r;
+	
+	r.creating_item = split_entry[0].to_item();
+	r.type = split_entry[1];
+	if (r.creating_item == $item[none])
+	{
+		//print_html("Unknown item " + split_entry[0]);
+        return;
+	}
+	for i from 2 to split_entry.count() - 1
+	{
+		string value = split_entry[i];
+		int [item] out;
+        parseDatafileItem(out, value);
+        if (out.count() > 0)
+        {
+        	foreach it, amount in out
+            {
+            	r.source_items[it] += amount;
+            }
+        }
+	}
+    if (r.type.contains_text("ROW"))
+        __item_is_purchasable_from_a_store[r.creating_item] = true;
+	
+	if (r.source_items.count() == 0)
+	{
+		//print_html(r.creating_item + " has no source items, entry is \"" + entry + "\"");
+        return;
+	}
+	InternalAddRecipe(r);
+	
+	
+	//print_html("Added " + r.creating_item + " of type " + r.type + " which requires " + r.source_items.to_json());
+}
+
+void InternalParseConcoctions()
+{
+	string [int] file_lines = file_to_array("data/concoctions.txt");
+	foreach key, entry in file_lines
+	{
+		//Note that FileUtilities.java appears to only ignore lines starting exactly with #.
+        //So that is what we will do.
+        if (entry == "") continue;
+        if (entry.char_at(0) == "#") continue;
+        InternalParseConcoctionEntry(entry);
+	}
+	
+	if (false)
+	{
+		foreach it in __item_recipes
+        {
+        	if (__item_recipes[it].count() <= 1) continue;
+            print_html(it + " has " + __item_recipes[it].count() + " recipes: " + __item_recipes[it].to_json()); 
+        }
+	}
+}
+
+void InternalParseCoinmasterEntry(string entry)
+{
+	//shop name, buy or sell, currency amount, item acquired, row
+	
+	string [int] split_entry = entry.split_string_alternate_immutable("\t");
+	if (split_entry.count() < 4) return;
+	if (split_entry[1] != "buy") return;
+	
+	Recipe r;
+	r.source_coinmaster = split_entry[0].to_coinmaster();
+	if (r.source_coinmaster == $coinmaster[none])
+	{
+		//print_html("Unknown coinmaster for " + entry);
+        return;
+	}
+	r.creating_item = split_entry[3].to_item();
+	if (r.creating_item == $item[none])
+	{
+		//print_html("Unknown item for " + entry);
+        return;
+	}
+	
+	int currency_amount = split_entry[2].to_int();
+	item store_item = r.source_coinmaster.item;
+	
+	if (store_item != $item[none])
+		r.source_items[store_item] = currency_amount;
+	
+	__item_is_purchasable_from_a_store[r.creating_item] = true;
+	
+	if (split_entry.count() >= 5)
+		r.coinmaster_row_id = split_entry[4];
+	if (r.source_items.count() == 0)
+	{
+		//print_html(r.creating_item + " has no source items, entry is \"" + entry + "\"");
+        return;
+	}
+	InternalAddRecipe(r);
+	//print_html(r.creating_item + ": " + r.to_json());
+}
+
+void InternalParseCoinmasters()
+{
+	//coinmasters.txt has improper format for actual game; it assumes a "store" currency which is not accurate, stores can have multiple currencies
+	
+	string [int] file_lines = file_to_array("data/coinmasters.txt");
+	foreach key, entry in file_lines
+	{
+        if (entry == "") continue;
+        if (entry.char_at(0) == "#") continue;
+        InternalParseCoinmasterEntry(entry);
+	}
+}
+
+
+void initialiseItemIngredients()
+{
+    if (__item_recipes.count() > 0) return;
+    
+    //Parse concoctions:
+    InternalParseConcoctions();
+    
+    //Parse coinmasters:
+    InternalParseCoinmasters();
+    
+}
+initialiseItemIngredients();
+
+
+
+
+
 void testItemIngredients()
 {
-    initialiseItemIngredients();
-    print_html(__item_ingredients.count() + " ingredients known.");
+    print_html(__item_recipes.count() + " recipes known.");
     foreach it in $items[]
     {
         int [item] ground_truth_ingredients = it.get_ingredients();
@@ -2328,17 +2333,21 @@ static
     int PATH_OF_THE_PLUMBER = 38;
     int PATH_PLUMBER = 38;
     int PATH_LUIGI = 38;
-    int PATH_MAMA_LUIGI = 38;
     int PATH_MARIO = 38;
     int PATH_LOW_KEY_SUMMER = 39;
     int PATH_LOKI = 39;
+    int PATH_GREY_GOO = 40;
+    int PATH_ROBOT = 41;
+    int PATH_QUANTUM_TERRARIUM = 42;
+    int PATH_QUANTUM = 42;
+    int PATH_WILDFIRE = 43;
 }
 
-float numeric_modifier_replacement(item it, string modifier)
+float numeric_modifier_replacement(item it, string modifier_name)
 {
-    string modifier_lowercase = modifier.to_lower_case();
+    string modifier_lowercase = modifier_name.to_lower_case();
     float additional = 0;
-    if (my_path_id() == PATH_G_LOVER && !it.contains_text("g") && !it.contains_text("G"))
+    if (my_path().id == PATH_G_LOVER && !it.contains_text("g") && !it.contains_text("G"))
     	return 0.0;
     if (it == $item[your cowboy boots])
     {
@@ -2366,7 +2375,19 @@ float numeric_modifier_replacement(item it, string modifier)
     	if (it.equipped_amount() == 0)
      	   additional += 5;
     }
-    return numeric_modifier(it, modifier) + additional;
+    if (it == $item[backup camera])
+    {
+    	string camera_mode = get_property("backupCameraMode");
+        if (modifier_lowercase == "monster level" && camera_mode == "ml")
+        {
+        	return clampi(my_level() * 3, 3, 50);
+        }
+        else if (modifier_lowercase == "meat drop" && camera_mode == "meat")
+        	return 50;
+        else if (modifier_lowercase == "initiative" && camera_mode == "init")
+        	return 100;
+    }
+    return numeric_modifier(it, modifier_name) + additional;
 }
 
 
@@ -2412,26 +2433,43 @@ static
 
 static
 {
-    boolean [item] __items_that_craft_food;
     boolean [item] __minus_combat_equipment;
     boolean [item] __equipment;
     boolean [item] __items_in_outfits;
     boolean [string][item] __equipment_by_numeric_modifier;
     void initialiseItems()
     {
+    	int maximum_item_id = 0;
         foreach it in $items[]
         {
             //Crafting:
-            string craft_type = it.craft_type();
+            //moved to ingredients.ash:
+            /*string craft_type = it.craft_type();
             if (craft_type.contains_text("Cooking"))
             {
                 foreach ingredient in it.get_ingredients_fast()
                 {
                     __items_that_craft_food[ingredient] = true;
                 }
+            }*/
+            maximum_item_id = MAX(maximum_item_id, it.to_int());
+            //Equipment:
+            if ($slots[hat,weapon,off-hand,back,shirt,pants,acc1,acc2,acc3,familiar] contains it.to_slot())
+            {
+                __equipment[it] = true;
+                if (it.numeric_modifier("combat rate") < 0)
+                    __minus_combat_equipment[it] = true;
+            }
+        }
+        //mafia does not add new items to $items, so, support some new items:
+        for i from maximum_item_id + 1 to maximum_item_id + 100
+        {
+        	item it = i.to_item();
+            if (it == $item[none])
+            {
+            	continue;
             }
             
-            //Equipment:
             if ($slots[hat,weapon,off-hand,back,shirt,pants,acc1,acc2,acc3,familiar] contains it.to_slot())
             {
                 __equipment[it] = true;
@@ -2448,30 +2486,33 @@ static
     initialiseItems();
 }
 
-boolean [item] equipmentWithNumericModifier(string modifier)
+boolean [item] equipmentWithNumericModifier(string modifier_name)
 {
-	modifier = modifier.to_lower_case();
+	modifier_name = modifier_name.to_lower_case();
+	//dynamic items here
     boolean [item] dynamic_items;
-    dynamic_items[to_item("kremlin's greatest briefcase")] = true;
+    dynamic_items[to_item("backup camera")] = true;
+    dynamic_items[to_item("unwrapped knock-off retro superhero cape")] = true;
+    dynamic_items[$item[kremlin's greatest briefcase]] = true;
     dynamic_items[$item[your cowboy boots]] = true;
     dynamic_items[$item[a light that never goes out]] = true; //FIXME all smithsness items
-    if (!(__equipment_by_numeric_modifier contains modifier))
+    if (!(__equipment_by_numeric_modifier contains modifier_name))
     {
         //Build it:
         boolean [item] blank;
-        __equipment_by_numeric_modifier[modifier] = blank;
+        __equipment_by_numeric_modifier[modifier_name] = blank;
         foreach it in __equipment
         {
             if (dynamic_items contains it) continue;
-            if (it.numeric_modifier(modifier) != 0.0)
-                __equipment_by_numeric_modifier[modifier][it] = true;
+            if (it.numeric_modifier(modifier_name) != 0.0)
+                __equipment_by_numeric_modifier[modifier_name][it] = true;
         }
     }
     //Certain equipment is dynamic. Inspect them dynamically:
     boolean [item] extra_results;
     foreach it in dynamic_items
     {
-        if (it.numeric_modifier_replacement(modifier) != 0.0)
+        if (it.numeric_modifier_replacement(modifier_name) != 0.0)
         {
             extra_results[it] = true;
         }
@@ -2480,7 +2521,7 @@ boolean [item] equipmentWithNumericModifier(string modifier)
     string secondary_modifier = "";
     foreach e in $elements[hot,cold,spooky,stench,sleaze]
     {
-        if (modifier == e + " damage")
+        if (modifier_name == e + " damage")
             secondary_modifier = e + " spell damage";
     }
     if (secondary_modifier != "")
@@ -2490,11 +2531,11 @@ boolean [item] equipmentWithNumericModifier(string modifier)
     }
     
     if (extra_results.count() == 0)
-        return __equipment_by_numeric_modifier[modifier];
+        return __equipment_by_numeric_modifier[modifier_name];
     else
     {
         //Add extras:
-        foreach it in __equipment_by_numeric_modifier[modifier]
+        foreach it in __equipment_by_numeric_modifier[modifier_name]
         {
             extra_results[it] = true;
         }
@@ -2583,7 +2624,7 @@ boolean mafiaIsPastRevision(int revision_number)
 boolean have_familiar_replacement(familiar f)
 {
     //have_familiar bugs in avatar of sneaky pete for now, so:
-    if (my_path_id() == PATH_AVATAR_OF_BORIS || my_path_id() == PATH_AVATAR_OF_JARLSBERG || my_path_id() == PATH_AVATAR_OF_SNEAKY_PETE)
+    if (my_path().id == PATH_AVATAR_OF_BORIS || my_path().id == PATH_AVATAR_OF_JARLSBERG || my_path().id == PATH_AVATAR_OF_SNEAKY_PETE)
         return false;
     return f.have_familiar();
 }
@@ -2592,11 +2633,11 @@ boolean have_familiar_replacement(familiar f)
 boolean familiar_is_usable(familiar f)
 {
     //r13998 has most of these
-    if (my_path_id() == PATH_AVATAR_OF_BORIS || my_path_id() == PATH_AVATAR_OF_JARLSBERG || my_path_id() == PATH_AVATAR_OF_SNEAKY_PETE || my_path_id() == PATH_ACTUALLY_ED_THE_UNDYING || my_path_id() == PATH_LICENSE_TO_ADVENTURE || my_path_id() == PATH_POCKET_FAMILIARS || my_path_id() == PATH_VAMPIRE)
+    if (my_path().id == PATH_AVATAR_OF_BORIS || my_path().id == PATH_AVATAR_OF_JARLSBERG || my_path().id == PATH_AVATAR_OF_SNEAKY_PETE || my_path().id == PATH_ACTUALLY_ED_THE_UNDYING || my_path().id == PATH_LICENSE_TO_ADVENTURE || my_path().id == PATH_POCKET_FAMILIARS || my_path().id == PATH_VAMPIRE)
         return false;
     if (!is_unrestricted(f))
         return false;
-    if (my_path_id() == PATH_G_LOVER && !f.contains_text("g") && !f.contains_text("G"))
+    if (my_path().id == PATH_G_LOVER && !f.contains_text("g") && !f.contains_text("G"))
         return false;
     //On second thought, this is terrible:
 	/*int single_familiar_run = get_property_int("singleFamiliarRun");
@@ -2606,12 +2647,12 @@ boolean familiar_is_usable(familiar f)
 			return true;
 		return false;
 	}*/
-	if (my_path_id() == PATH_TRENDY)
+	if (my_path().id == PATH_TRENDY)
 	{
 		if (!is_trendy(f))
 			return false;
 	}
-	else if (my_path_id() == PATH_BEES_HATE_YOU)
+	else if (my_path().id == PATH_BEES_HATE_YOU)
 	{
 		if (f.to_string().contains_text("b") || f.to_string().contains_text("B")) //bzzzz!
 			return false; //so not green
@@ -2626,7 +2667,7 @@ boolean skill_is_usable(skill s)
         return false;
     if (!s.is_unrestricted())
         return false;
-    if (my_path_id() == PATH_G_LOVER && (!s.passive || s == $skill[meteor lore]) && !s.contains_text("g") && !s.contains_text("G"))
+    if (my_path().id == PATH_G_LOVER && (!s.passive || s == $skill[meteor lore]) && !s.contains_text("g") && !s.contains_text("G"))
     	return false;
     if ($skills[rapid prototyping] contains s)
         return $item[hand turkey outline].is_unrestricted();
@@ -2656,9 +2697,9 @@ boolean item_is_usable(item it)
 {
     if (!it.is_unrestricted())
         return false;
-    if (my_path_id() == PATH_G_LOVER && !it.contains_text("g") && !it.contains_text("G"))
+    if (my_path().id == PATH_G_LOVER && !it.contains_text("g") && !it.contains_text("G"))
         return false;
-    if (my_path_id() == PATH_BEES_HATE_YOU && (it.contains_text("b") || it.contains_text("B")))
+    if (my_path().id == PATH_BEES_HATE_YOU && (it.contains_text("b") || it.contains_text("B")))
     	return false;
 	return true;
 }
@@ -2672,7 +2713,7 @@ int usable_amount(item it)
 
 boolean effect_is_usable(effect e)
 {
-    if (my_path_id() == PATH_G_LOVER && !e.contains_text("g") && !e.contains_text("G"))
+    if (my_path().id == PATH_G_LOVER && !e.contains_text("g") && !e.contains_text("G"))
         return false;
     return true;
 }
@@ -2950,7 +2991,7 @@ int substatsForLevel(int level)
 int availableFullness()
 {
 	int limit = fullness_limit();
-    if (my_path_id() == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0 && $skill[Replacement Stomach].have_skill())
+    if (my_path().id == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0 && $skill[Replacement Stomach].have_skill())
     {
         limit += 5;
     }
@@ -2960,7 +3001,7 @@ int availableFullness()
 int availableDrunkenness()
 {
     int limit = inebriety_limit();
-    if (my_path_id() == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0 && $skill[Replacement Liver].have_skill())
+    if (my_path().id == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0 && $skill[Replacement Liver].have_skill())
     {
     	limit += 5;
     }
@@ -2971,7 +3012,7 @@ int availableDrunkenness()
 int availableSpleen()
 {
 	int limit = spleen_limit();
-	if (my_path_id() == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0)
+	if (my_path().id == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0)
 	{
         limit += 5; //always true
 		//mafia resets the limits to zero in the underworld because it does, so anti-mafia:
@@ -3449,17 +3490,17 @@ float initiative_modifier_ignoring_plants()
 
 float item_drop_modifier_ignoring_plants()
 {
-    float modifier = item_drop_modifier();
+    float modifier_value = item_drop_modifier();
     
     location my_location = my_location();
     if (my_location != $location[none])
     {
         if (my_location.locationHasPlant("Rutabeggar") || my_location.locationHasPlant("Stealing Magnolia"))
-            modifier -= 25.0;
+            modifier_value -= 25.0;
         if (my_location.locationHasPlant("Kelptomaniac"))
-            modifier -= 40.0;
+            modifier_value -= 40.0;
     }
-    return modifier;
+    return modifier_value;
 }
 
 int monster_level_adjustment_ignoring_plants() //this is unsafe to use in heavy rains
@@ -3528,7 +3569,7 @@ int monster_level_adjustment_for_location(location l)
         ml += 30;
     }
     
-    if (my_path_id() == PATH_HEAVY_RAINS)
+    if (my_path().id == PATH_HEAVY_RAINS)
     {
         //complicated:
         //First, cancel out the my_location() rain:
@@ -3618,6 +3659,14 @@ boolean weapon_is_club(item it)
     return false;
 }
 
+boolean weapon_is_sword(item it)
+{
+    if (it.to_slot() != $slot[weapon]) return false;
+    if (it.item_type() == "sword" && $effect[Iron Palms].have_effect() == 0)
+        return true;
+    return false;
+}
+
 buffer prepend(buffer in_buffer, buffer value)
 {
     buffer result;
@@ -3653,14 +3702,7 @@ int XiblaxianHoloWristPuterTurnsUntilNextItem()
     int progress = get_property_int("_holoWristProgress");
     
     //_holoWristProgress resets when drop happens
-    if (!mafiaIsPastRevision(15148))
-        return -1;
     int next_turn_hit = 5 * (drops + 1) + 6;
-    if (!mafiaIsPastRevision(15493)) //old behaviour
-    {
-        if (drops != 0)
-            next_turn_hit += 1;
-    }
     return MAX(0, next_turn_hit - progress);
 }
 
@@ -3750,6 +3792,16 @@ int nextLibramSummonMPCost()
     return libram_mp_cost;
 }
 
+int maximumSimultaneous1hWeaponsEquippable()
+{
+    int weapon_maximum = 1;
+    if ($skill[double-fisted skull smashing].skill_is_usable())
+        weapon_maximum += 1;
+    if (my_familiar() == $familiar[disembodied hand])
+        weapon_maximum += 1;
+    return weapon_maximum;
+}
+
 int equippable_amount(item it)
 {
     if (!it.can_equip()) return it.equipped_amount();
@@ -3758,12 +3810,7 @@ int equippable_amount(item it)
         return MIN(3, it.available_amount());
     if (it.to_slot() == $slot[weapon] && it.weapon_hands() == 1)
     {
-        int weapon_maximum = 1;
-        if ($skill[double-fisted skull smashing].skill_is_usable())
-            weapon_maximum += 1;
-        if (my_familiar() == $familiar[disembodied hand])
-            weapon_maximum += 1;
-        return MIN(weapon_maximum, it.available_amount());
+        return MIN(maximumSimultaneous1hWeaponsEquippable(), it.available_amount());
     }
     return 1;
 }
@@ -3807,11 +3854,17 @@ item [int] generateEquipmentForExtraExperienceOnStat(stat desired_stat, boolean 
     foreach it in equipmentWithNumericModifier(numeric_modifier_string)
     {
     	slot s = it.to_slot();
-        if (s == $slot[shirt] && !(to_skill("Torso Awareness").have_skill() || $skill[Best Dressed].have_skill()))
+        if (s == $slot[shirt] && !(lookupSkill("Torso Awareness").have_skill() || $skill[Best Dressed].have_skill()))
+        	continue;
+        if (s == $slot[weapon] && it.weapon_hands() > 1 && item_slots[$slot[off-hand]] != $item[none]) //can't equip an off-hand and a two-handed weapon
         	continue;
         if (it.available_amount() > 0 && (!require_can_equip_currently || it.can_equip()) && item_slots[it.to_slot()].numeric_modifier(numeric_modifier_string) < it.numeric_modifier(numeric_modifier_string))
         {
             item_slots[it.to_slot()] = it;
+            if (s == $slot[weapon] && it.weapon_hands() > 1)
+            {
+                item_slots[$slot[off-hand]] = it;
+            }
         }
     }
     
@@ -3849,7 +3902,7 @@ float averageAdventuresForConsumable(item it, boolean assume_monday)
 			continue;
 		adventures += a * (1.0 / to_float(adventures_string.count()));
 	}
-    if (it == lookupItem("affirmation cookie"))
+    if (it == $item[affirmation cookie])
         adventures += 3;
     if (it == $item[White Citadel burger])
     {
@@ -3913,7 +3966,7 @@ boolean monsterIsGhost(monster m)
         return true;
     if ($monsters[boneless blobghost,the ghost of Vanillica \"Trashblossom\" Gorton,restless ghost,The Icewoman,the ghost of Monsieur Baguelle,The ghost of Lord Montague Spookyraven,The Headless Horseman,The ghost of Ebenoozer Screege,The ghost of Sam McGee,The ghost of Richard Cockingham,The ghost of Jim Unfortunato,The ghost of Waldo the Carpathian,the ghost of Oily McBindle] contains m)
         return true;
-    if (lookupMonster("Emily Koops, a spooky lime") == m)
+    if ($monster[Emily Koops, a spooky lime] == m)
         return true;*/
     return false;
 }
@@ -3990,8 +4043,8 @@ boolean monster_has_zero_turn_cost(monster m)
 {
     if (m.attributes.contains_text("FREE"))
         return true;
-    if (m == lookupMonster("sausage goblin") && m != $monster[none]) return true;
-    if (lookupMonsters("LOV Engineer,LOV Enforcer,LOV Equivocator") contains m) return true;
+    if (m == $monster[sausage goblin] && m != $monster[none]) return true;
+    if ($monsters[LOV Engineer,LOV Enforcer,LOV Equivocator] contains m) return true;
         
     if ($monsters[lynyrd] contains m) return true; //not marked as FREE in attributes
     //if ($monsters[Black Crayon Beast,Black Crayon Beetle,Black Crayon Constellation,Black Crayon Golem,Black Crayon Demon,Black Crayon Man,Black Crayon Elemental,Black Crayon Crimbo Elf,Black Crayon Fish,Black Crayon Goblin,Black Crayon Hippy,Black Crayon Hobo,Black Crayon Shambling Monstrosity,Black Crayon Manloid,Black Crayon Mer-kin,Black Crayon Frat Orc,Black Crayon Penguin,Black Crayon Pirate,Black Crayon Flower,Black Crayon Slime,Black Crayon Undead Thing,Black Crayon Spiraling Shape,broodling seal,Centurion of Sparky,heat seal,hermetic seal,navy seal,Servant of Grodstank,shadow of Black Bubbles,Spawn of Wally,watertight seal,wet seal,lynyrd,BRICKO airship,BRICKO bat,BRICKO cathedral,BRICKO elephant,BRICKO gargantuchicken,BRICKO octopus,BRICKO ooze,BRICKO oyster,BRICKO python,BRICKO turtle,BRICKO vacuum cleaner,Witchess Bishop,Witchess King,Witchess Knight,Witchess Ox,Witchess Pawn,Witchess Queen,Witchess Rook,Witchess Witch,The ghost of Ebenoozer Screege,The ghost of Lord Montague Spookyraven,The ghost of Waldo the Carpathian,The Icewoman,The ghost of Jim Unfortunato,the ghost of Sam McGee,the ghost of Monsieur Baguelle,the ghost of Vanillica "Trashblossom" Gorton,the ghost of Oily McBindle,boneless blobghost,The ghost of Richard Cockingham,The Headless Horseman,Emily Koops\, a spooky lime,time-spinner prank,random scenester,angry bassist,blue-haired girl,evil ex-girlfriend,peeved roommate] contains m)
@@ -4000,7 +4053,13 @@ boolean monster_has_zero_turn_cost(monster m)
         return true;
     if (my_familiar() == $familiar[machine elf] && my_location() == $location[the deep machine tunnels] && get_property_int("_machineTunnelsAdv") < 5)
         return true;
-    if (lookupMonsters("terrible mutant,slime blob,government bureaucrat,angry ghost,annoyed snake") contains m && get_property_int("_voteFreeFights") < 3)
+    if ($monsters[terrible mutant,slime blob,government bureaucrat,angry ghost,annoyed snake] contains m && get_property_int("_voteFreeFights") < 3)
+    	return true;
+    if (lookupMonsters("void guy,void slab,void spider") contains m && get_property_int("_voidFreeFights") < 5)
+    	return true;
+    if ($monsters[biker,burnout,jock,party girl,"plain" girl] contains m && get_property_int("_neverendingPartyFreeTurns") < 10)
+    	return true;
+    if (m == $monster[piranha plant]) //may or may not be location-specific?
     	return true;
     return false;
 }
@@ -4229,6 +4288,126 @@ boolean canAccessMall()
 	return true;
 }
 
+string generateEquipmentLink(item equipment)
+{
+	if (!equipment.have()) return "";
+	if (equipment.equipped()) return "inventory.php?which=2";
+	
+	string ftext_value = equipment.replace_string(" ", "+").entity_encode();
+	if (equipment.item_amount() == 0 && can_interact() && equipment.storage_amount() > 0) return "storage.php?which=2&ftext=" + ftext_value;
+	return "inventory.php?which=2&ftext=" + ftext_value;
+}
+
+//it says "next NC will be" but it means, extremely specifically, a certain class of non-combats. I don't know how this skill interacts with superlikelies or those intro adventures and such
+boolean locationNextNCWillBeCartography(location l)
+{
+    if (!lookupSkill("Comprehensive Cartography").skill_is_usable()) return false;
+    
+    //We use the following method to determine if cartography will fire:
+    //We look for "relevant" NC names in recent noncombats in the zone. If any of the relevant NCs are there, then it won't happen.
+    //The relevant NCs are the cartography NC, and the NCs it "replaces"
+    //This can fail, if there is five outside-zone data points in noncombat_queue - which I think can happen sometimes?
+    boolean [string] relevant_nc_names;
+ 
+	//manually handle every NC:
+    if (l == $location[Guano Junction]) //100%
+    {
+        relevant_nc_names = $strings[The Hidden Junction];
+    }
+    else if (l == $location[A-boo Peak]) //...unknown? 100%?
+    {
+        relevant_nc_names = $strings[Ghostly Memories];
+    }
+    else if (l == $location[the haunted billiards room]) //not 100%
+    {
+        relevant_nc_names = $strings[Billiards Room Options,That's your cue,Welcome To Our ool Table];
+    }
+    else if (l == $location[The Dark Neck of the Woods]) //not 100%
+    {
+        relevant_nc_names = $strings[Your Neck of the Woods,How Do We Do It? Quaint and Curious Volume!,Strike One!,Olive My Love To You\, Oh.,Dodecahedrariffic!];
+    }
+    else if (l == $location[The Defiled Nook]) //not 100%
+    {
+        relevant_nc_names = $strings[No Nook Unknown,Skull\, Skull\, Skull];
+    }
+    else if (l == $location[The Castle in the Clouds in the Sky (Top Floor)]) //not 100%
+    {
+        relevant_nc_names = $strings[Here There Be Giants,Copper Feel,Melon Collie and the Infinite Lameness,Yeah\, You're for Me\, Punk Rock Giant,Flavor of a Raver];
+    }
+    else if (l == $location[A Mob of Zeppelin Protesters]) //not 100%
+    {
+        relevant_nc_names = $strings[Mob Maptality,Bench Warrant,Fire Up Above,This Looks Like a Good Bush for an Ambush];
+    }
+    else if (l == $location[Frat House]) //not 100%. FIXME correct zone?
+    {
+        relevant_nc_names = $strings[Oh Yeah!,Purple Hazers,From Stoked to Smoked,Murder by Death,Sing This Explosion to Me]; //is this correct...?
+    }
+    else if (l == $location[Wartime Frat House (Hippy Disguise)]) //not 100%. FIXME correct zone?
+    {
+        relevant_nc_names = $strings[Sneaky\, Sneaky,Catching Some Zetas,Fratacombs,One Less Room Than In That Movie];
+    }
+    else if (l == $location[Wartime Hippy Camp (Frat Disguise)]) //not 100%. FIXME correct zone?
+    {
+        relevant_nc_names = $strings[Sneaky\, Sneaky,Bait and Switch,Blockin' Out the Scenery,The Thin Tie-Dyed Line];
+    }
+    
+    if (relevant_nc_names.count() == 0) return false;
+    
+    
+    foreach key, noncombat_name in l.locationSeenNoncombats()
+    {
+        if (relevant_nc_names[noncombat_name]) return false;
+    }
+    return true;
+}
+
+string getBasicItemDescription(item it)
+{
+	buffer out;
+	
+	string item_type = it.item_type();
+	
+	//if (item_type == "accessory") item_type = "acc";
+	if (item_type == "container") item_type = "back";
+	int weapon_hands = it.weapon_hands();
+	
+	if (weapon_hands != 0)
+	{
+        stat weapon_type = it.weapon_type();
+        
+		out.append(weapon_hands);
+        out.append("h ");
+        if (weapon_type == $stat[moxie])
+        	out.append("ranged ");
+        else
+        	out.append("melee ");
+	}
+	
+	out.append(item_type);
+	return out.to_string();
+}
+
+boolean monsterCanBeCopied(monster m)
+{
+	if (!m.copyable) return false;
+	if (m.boss) return false;
+	if ($monsters[writing desk,dirty thieving brigand] contains m) return false; //manual override list
+	return true;
+}
+
+boolean locationIsGoneFromTheGame(location l)
+{
+	if (l.parent == "Removed") return true;
+	
+	return false;
+}
+boolean locationIsEventSpecific(location l)
+{
+	if (l.zone == "Twitch" || l.zone == "Events") return true;
+	
+	return false;
+}
+
 
 
 float __setting_indention_width_in_em = 1.45;
@@ -4236,30 +4415,109 @@ string __setting_indention_width = __setting_indention_width_in_em + "em";
 
 string __html_right_arrow_character = "&#9658;";
 
-buffer HTMLGenerateTagPrefix(string tag, string [string] attributes)
+//Design note: try to prefer HTMLAppend to HTMLGenerate due to lack of temporary objects.
+
+
+buffer HTMLAppendTagPrefix(buffer out, string tag, string attribute_1, string value_1, string attribute_2, string value_2)
 {
-	buffer result;
-	result.append("<");
-	result.append(tag);
+	out.append("<");
+	out.append(tag);
+	
+    out.append(" ");
+    out.append(attribute_1);
+    if (value_1 != "")
+    {
+        boolean is_integer = value_1.is_integer(); //don't put quotes around integer attributes (i.e. width, height)
+        
+        out.append("=");
+        if (!is_integer)
+            out.append("\"");
+        out.append(value_1);
+        if (!is_integer)
+            out.append("\"");
+    }
+    
+    out.append(" ");
+    out.append(attribute_2);
+    if (value_2 != "")
+    {
+        boolean is_integer = value_2.is_integer(); //don't put quotes around integer attributes (i.e. width, height)
+        
+        out.append("=");
+        if (!is_integer)
+            out.append("\"");
+        out.append(value_2);
+        if (!is_integer)
+            out.append("\"");
+    }
+    
+    
+    
+	out.append(">");
+	return out;
+}
+
+buffer HTMLAppendTagPrefix(buffer out, string tag, string attribute_1, string value_1)
+{
+	out.append("<");
+	out.append(tag);
+	
+    out.append(" ");
+    out.append(attribute_1);
+    if (value_1 != "")
+    {
+        boolean is_integer = value_1.is_integer(); //don't put quotes around integer attributes (i.e. width, height)
+        
+        out.append("=");
+        if (!is_integer)
+            out.append("\"");
+        out.append(value_1);
+        if (!is_integer)
+            out.append("\"");
+    }
+    
+    
+	out.append(">");
+	return out;
+}
+
+buffer HTMLAppendTagPrefix(buffer out, string tag, string [string] attributes)
+{
+	out.append("<");
+	out.append(tag);
 	foreach attribute_name, attribute_value in attributes
 	{
 		//string attribute_value = attributes[attribute_name];
-		result.append(" ");
-		result.append(attribute_name);
+		out.append(" ");
+		out.append(attribute_name);
 		if (attribute_value != "")
 		{
 			boolean is_integer = attribute_value.is_integer(); //don't put quotes around integer attributes (i.e. width, height)
 			
-			result.append("=");
+			out.append("=");
 			if (!is_integer)
-				result.append("\"");
-			result.append(attribute_value);
+				out.append("\"");
+			out.append(attribute_value);
 			if (!is_integer)
-				result.append("\"");
+				out.append("\"");
 		}
 	}
-	result.append(">");
-	return result;
+	out.append(">");
+	return out;
+}
+
+buffer HTMLGenerateTagPrefix(string tag, string [string] attributes)
+{
+	buffer result;
+	return HTMLAppendTagPrefix(result, tag, attributes);
+}
+
+buffer HTMLAppendTagPrefix(buffer out, string tag)
+{
+    out.append("<");
+    out.append(tag);
+    out.append(">");
+    return out;
 }
 
 buffer HTMLGenerateTagPrefix(string tag)
@@ -4271,42 +4529,72 @@ buffer HTMLGenerateTagPrefix(string tag)
     return result;
 }
 
+
+buffer HTMLAppendTagSuffix(buffer out, string tag)
+{
+    out.append("</");
+    out.append(tag);
+    out.append(">");
+    return out;
+}
+
 buffer HTMLGenerateTagSuffix(string tag)
 {
     buffer result;
-    result.append("</");
-    result.append(tag);
-    result.append(">");
-    return result;
+    return result.HTMLAppendTagSuffix(tag);
+}
+
+buffer HTMLAppendTagWrap(buffer out, string tag, string source, string [string] attributes)
+{
+    out.HTMLAppendTagPrefix(tag, attributes);
+    out.append(source);
+    out.HTMLAppendTagSuffix(tag);
+	return out;
 }
 
 buffer HTMLGenerateTagWrap(string tag, string source, string [string] attributes)
 {
     buffer result;
-    result.append(HTMLGenerateTagPrefix(tag, attributes));
-    result.append(source);
-    result.append(HTMLGenerateTagSuffix(tag));
-	return result;
+    return result.HTMLAppendTagWrap(tag, source, attributes);
 }
 
 buffer HTMLGenerateTagWrap(string tag, string source)
 {
     buffer result;
-    result.append(HTMLGenerateTagPrefix(tag));
+    result.HTMLAppendTagPrefix(tag);
     result.append(source);
-    result.append(HTMLGenerateTagSuffix(tag));
+    result.HTMLAppendTagSuffix(tag);
 	return result;
+}
+
+buffer HTMLAppendDivOfClass(buffer out, string source, string class_name)
+{
+	if (class_name == "")
+	{
+		out.append("<div>");
+		//return HTMLGenerateTagWrap("div", source);
+    }
+	else
+	{
+		out.append("<div class=\"");
+        out.append(class_name);
+        out.append("\">");
+		//return HTMLGenerateTagWrap("div", source, mapMake("class", class_name));
+    }
+    out.append(source);
+    out.append("</div>");
+    
+    return out;
 }
 
 buffer HTMLGenerateDivOfClass(string source, string class_name)
 {
-	if (class_name == "")
-		return HTMLGenerateTagWrap("div", source);
-	else
-		return HTMLGenerateTagWrap("div", source, mapMake("class", class_name));
+	buffer out;
+	out.HTMLAppendDivOfClass(source, class_name);
+	return out;
 }
 
-buffer HTMLGenerateDivOfClass(string source, string class_name, string extra_style)
+buffer HTMLGenerateDivOfClassAndStyle(string source, string class_name, string extra_style)
 {
 	return HTMLGenerateTagWrap("div", source, mapMake("class", class_name, "style", extra_style));
 }
@@ -4418,8 +4706,14 @@ string HTMLGreyOutTextUnlessTrue(string text, boolean conditional)
         return text;
     return HTMLGenerateSpanFont(text, "gray");
 }
+
+//Should this be here...? Might be "Guide" instead of this.
+string HTMLGenerateTooltip(string underline_text, string inner_html)
+{
+	return HTMLGenerateSpanOfClass(HTMLGenerateSpanOfClass(inner_html, "r_tooltip_inner_class") + underline_text, "r_tooltip_outer_class");
+}
 //These settings are for development. Don't worry about editing them.
-string __version = "1.4.41a1";
+string __version = "2.0.8";
 
 //Debugging:
 boolean __setting_debug_mode = false;
@@ -4430,9 +4724,10 @@ boolean __setting_debug_show_all_internal_states = false; //displays usable imag
 //Display settings:
 boolean __setting_entire_area_clickable = false;
 boolean __setting_side_negative_space_is_dark = true;
+boolean __setting_newstyle_navbars = true;
 boolean __setting_fill_vertical = true;
-int __setting_image_width_large = 100;
-int __setting_image_width_medium = 70;
+int __setting_image_width_large = 50;
+int __setting_image_width_medium = 50;
 int __setting_image_width_small = 30;
 
 boolean __show_importance_bar = true;
@@ -4440,6 +4735,9 @@ boolean __setting_show_navbar = true;
 boolean __setting_navbar_has_proportional_widths = false; //doesn't look very good, remove?
 boolean __setting_gray_navbar = true;
 boolean __use_table_based_layouts = false; //backup implementation. not compatible with media queries. consider removing?
+boolean __use_flexbox_on_checklists = true;
+boolean __enable_showhide_feature = true;
+
 boolean __setting_use_kol_css = false; //images/styles.css
 boolean __setting_show_location_bar = true;
 boolean __setting_enable_location_popup_box = true;
@@ -4450,12 +4748,27 @@ float __setting_location_bar_max_width_per_entry = 0.35;
 boolean __setting_small_size_uses_full_width = false; //implemented, but disabled - doesn't look amazing. reduced indention width instead to compensate
 boolean __setting_enable_outputting_all_numberology_options = true;
 
-string __setting_unavailable_colour = "#7F7F7F";
-string __setting_line_colour = "#B2B2B2";
-string __setting_dark_colour = "#C0C0C0";
-string __setting_modifier_colour = "#404040";
-string __setting_navbar_background_colour = "#FFFFFF";
-string __setting_page_background_colour = "#F7F7F7";
+//Do not use directly; use var() calls
+string __setting_unavailable_colour = "#7F7F7F"; //var(--unavailable_colour)
+string __setting_line_colour = "#B2B2B2"; //var(--line_colour)
+string __setting_dark_colour = "#C0C0C0"; //var(--dark_colour)
+string __setting_modifier_colour = "#404040"; //var(--modifier_colour)
+string __setting_navbar_background_colour = "#FFFFFF"; //var(--navbar_background_colour)
+string __setting_page_background_colour = "#F7F7F7"; //var(--page_background_colour)
+string __setting_main_content_background_colour = "#FFFFFF"; //var(--main_content_background_colour)
+string __setting_main_content_text_colour = "#000000"; //var(--main_content_text_colour)
+string __setting_hover_alternate_colour = "#CCCCCC"; //var(--hover_alternate_colour)
+
+//Inverted, dark mode versions of above:
+string __setting_unavailable_colour_dark = "#7F7F7F"; //var(--unavailable_colour)
+string __setting_line_colour_dark = "#4D4D4D"; //var(--line_colour)
+string __setting_dark_colour_dark = "#3F3F3F"; //var(--dark_colour)
+string __setting_modifier_colour_dark = "#BFBFBF"; //var(--modifier_colour)
+string __setting_navbar_background_colour_dark = "#000000"; //var(--navbar_background_colour)
+string __setting_page_background_colour_dark = "#3F3F3F"; //var(--page_background_colour)
+string __setting_main_content_background_colour_dark = "#000000"; //var(--main_content_background_colour)
+string __setting_main_content_text_colour_dark = "#FFFFFF"; //var(--main_content_text_colour)
+string __setting_hover_alternate_colour_dark = "#333333"; //var(--hover_alternate_colour)
 
 string __setting_media_query_large_size = "@media (min-width: 500px)";
 string __setting_media_query_medium_size = "@media (min-width: 350px) and (max-width: 500px)";
@@ -4466,6 +4779,7 @@ float __setting_navbar_height_in_em = 2.3;
 string __setting_navbar_height = __setting_navbar_height_in_em + "em";
 int __setting_horizontal_width = 600;
 boolean __setting_ios_appearance = false; //no don't
+string __relay_filename;
 
 record CSSEntry
 {
@@ -4473,32 +4787,34 @@ record CSSEntry
     string class_name;
     string definition;
     int importance;
+    string block_identifier;
 };
 
-CSSEntry CSSEntryMake(string tag, string class_name, string definition, int importance)
+CSSEntry CSSEntryMake(string tag, string class_name, string definition, int importance, string block_identifier)
 {
     CSSEntry entry;
     entry.tag = tag;
     entry.class_name = class_name;
     entry.definition = definition;
     entry.importance = importance;
+    entry.block_identifier = block_identifier;
     return entry;
 }
 
-record CSSBlock
+record CSSBlock //no longer used; kept for backwards compatibility
 {
     CSSEntry [int] defined_css_classes;
     string identifier;
 };
 
-CSSBlock CSSBlockMake(string identifier)
+CSSBlock CSSBlockMake(string identifier) //no longer used; kept for backwards compatibility
 {
     CSSBlock result;
     result.identifier = identifier;
     return result;
 }
 
-buffer CSSBlockGenerate(CSSBlock block)
+buffer CSSBlockGenerate(CSSBlock block) //no longer used; kept for backwards compatibility
 {
     buffer result;
     
@@ -4547,7 +4863,8 @@ record Page
 	buffer body_contents;
 	string [string] body_attributes; //[attribute_name] -> attribute_value
 	
-    CSSBlock [string] defined_css_blocks; //There is always an implicit "" block.
+    CSSBlock [string] defined_css_blocks; //There is always an implicit "" block. Deprecated.
+    CSSEntry [int] defined_css_classes; //new approach
 };
 
 
@@ -4581,12 +4898,12 @@ buffer PageGenerateStyle(Page page_in)
 {
     buffer result;
     
-    if (page_in.defined_css_blocks.count() > 0)
+    if (page_in.defined_css_blocks.count() > 0) //no longer used; kept for backwards compatibility
     {
         if (true)
         {
             result.append("\t\t");
-            result.append(HTMLGenerateTagPrefix("style", mapMake("type", "text/css")));
+            result.HTMLAppendTagPrefix("style", "type", "text/css");
             result.append("\n");
         }
         result.append(page_in.defined_css_blocks[""].CSSBlockGenerate()); //write first
@@ -4602,6 +4919,62 @@ buffer PageGenerateStyle(Page page_in)
             result.append("\t\t</style>\n");
         }
     }
+    
+    if (page_in.defined_css_classes.count() > 0)
+    {
+    	sort page_in.defined_css_classes by value.block_identifier;
+    	sort page_in.defined_css_classes by value.importance;
+        
+        if (true)
+        {
+            result.append("\t\t");
+            result.HTMLAppendTagPrefix("style", "type", "text/css");
+            result.append("\n");
+        }
+        
+        
+        string active_block_identifier = "";
+        foreach key, entry in page_in.defined_css_classes
+        {
+            boolean has_identifier = (entry.block_identifier != "");
+            
+            if (entry.block_identifier != active_block_identifier)
+            {
+                if (active_block_identifier.length() > 0)
+                    result.append("\n\t\t\t}\n");
+                if (has_identifier)
+                {
+                    result.append("\t\t\t");
+                    result.append(entry.block_identifier);
+                    result.append(" {\n");
+                }
+                active_block_identifier = entry.block_identifier;
+            }
+            
+            result.append("\t\t\t");
+            if (active_block_identifier.length() > 0)
+                result.append("\t");
+        
+            if (entry.class_name == "")
+                result.append(entry.tag + " { " + entry.definition + " }");
+            else
+                result.append(entry.tag + "." + entry.class_name + " { " + entry.definition + " }");
+            result.append("\n");
+                
+        }
+        if (active_block_identifier.length() > 0)
+        {
+        	active_block_identifier = "";
+            result.append("\n\t\t\t}\n");
+        }
+        
+        if (true)
+        {
+            result.append("\t\t</style>\n");
+        }
+    }
+    
+    
     return result;
 }
 
@@ -4634,7 +5007,7 @@ buffer PageGenerate(Page page_in)
 	
 	//Body:
 	result.append("\t");
-	result.append(HTMLGenerateTagPrefix("body", page_in.body_attributes));
+	result.HTMLAppendTagPrefix("body", page_in.body_attributes);
 	result.append("\n\t\t");
 	result.append(page_in.body_contents);
 	result.append("\n");
@@ -4676,9 +5049,14 @@ void PageSetTitle(Page page_in, string title)
 void PageAddCSSClass(Page page_in, string tag, string class_name, string definition, int importance, string block_identifier)
 {
     //print_html("Adding block_identifier \"" + block_identifier + "\"");
-    if (!(page_in.defined_css_blocks contains block_identifier))
-        page_in.defined_css_blocks[block_identifier] = CSSBlockMake(block_identifier);
-    page_in.defined_css_blocks[block_identifier].defined_css_classes.listAppend(CSSEntryMake(tag, class_name, definition, importance));
+    if (false) //deprecated
+    {
+        if (!(page_in.defined_css_blocks contains block_identifier))
+            page_in.defined_css_blocks[block_identifier] = CSSBlockMake(block_identifier);
+        page_in.defined_css_blocks[block_identifier].defined_css_classes.listAppend(CSSEntryMake(tag, class_name, definition, importance, block_identifier));
+	}
+    
+    page_in.defined_css_classes.listAppend(CSSEntryMake(tag, class_name, definition, importance, block_identifier));
 }
 
 void PageAddCSSClass(Page page_in, string tag, string class_name, string definition, int importance)
@@ -4804,19 +5182,23 @@ void PageInit()
 	
 	//Simple table lines:
 	PageAddCSSClass("div", "r_stl_container", "display:table;");
-	PageAddCSSClass("div", "r_stl_container_row", "display:table-row;");
-    PageAddCSSClass("div", "r_stl_entry", "padding:0px;margin:0px;display:table-cell;");
-    PageAddCSSClass("div", "r_stl_spacer", "width:1em;");
+	PageAddCSSClass("div", "r_stl_row", "display:table-row;");
+    PageAddCSSClass("div", "r_stl_entry", "padding:0px;margin:0px;display:table-cell;padding-top:1px;padding-right:1em;border-bottom:1px solid var(--line_colour);padding-bottom:1px;");
+    PageAddCSSClass("div", "r_stl_entry_last_column", "padding-right:0em;");
+    PageAddCSSClass("div", "r_stl_entry_last_row", "border-bottom:initial;padding-bottom:0px;");
+    
+    //PageAddCSSClass("div", "r_stl_spacer", "width:1em;");
 }
 
 
 
 string HTMLGenerateIndentedText(string text, string width)
 {
-	if (__use_table_based_layouts) //table-based layout
+	/*if (__use_table_based_layouts) //table-based layout
 		return "<table cellpadding=0 cellspacing=0 width=100%><tr>" + HTMLGenerateTagWrap("td", "", mapMake("style", "width:" + width + ";")) + "<td>" + text + "</td></tr></table>";
-	else //div-based layout:
-		return HTMLGenerateDivOfClass(text, "r_indention");
+	else //div-based layout:*/
+	
+    return HTMLGenerateDivOfClass(text, "r_indention");
 }
 
 string HTMLGenerateIndentedText(string [int] text)
@@ -4848,7 +5230,7 @@ string HTMLGenerateSimpleTableLines(string [int][int] lines, boolean dividers_ar
 		max_columns = max(max_columns, lines[i].count());
 	}
 	
-	if (__use_table_based_layouts)
+	/*if (__use_table_based_layouts)
 	{
 		//table-based layout:
 		result.append("<table style=\"margin-right: 10px; width:100%;\" cellpadding=0 cellspacing=0>");
@@ -4890,17 +5272,18 @@ string HTMLGenerateSimpleTableLines(string [int][int] lines, boolean dividers_ar
 	
 		result.append("</table>");
 	}
-	else
+	else*/
+	if (true)
 	{
 		//div-based layout:
-        int intra_i = 0;
-        int last_cell_count = 0;
-        result.append(HTMLGenerateTagPrefix("div", mapMake("class", "r_stl_container")));
+        //int intra_i = 0;
+        //int last_cell_count = 0;
+        result.HTMLAppendTagPrefix("div", "class", "r_stl_container");
 		foreach i in lines
 		{
-            if (intra_i > 0)
+            /*if (intra_i > 0)
             {
-                result.append(HTMLGenerateTagPrefix("div", mapMake("class", "r_stl_container_row")));
+                result.HTMLAppendTagPrefix("div", "class", "r_stl_row");
                 for i from 1 to last_cell_count //no colspan with display:table, generate extra (zero-padding, zero-margin) cells:
                 {
                     string separator = "";
@@ -4908,29 +5291,34 @@ string HTMLGenerateSimpleTableLines(string [int][int] lines, boolean dividers_ar
                         separator = "<hr>";
                     else
                         separator = "<hr style=\"opacity:0\">"; //laziness - generate an invisible HR, so there's still spacing
-                    result.append(HTMLGenerateDivOfClass(separator, "r_stl_entry"));
+                    result.HTMLAppendDivOfClass(separator, "r_stl_entry");
                 }
                 result.append("</div>");
                 last_cell_count = 0;
-            }
-            result.append(HTMLGenerateTagPrefix("div", mapMake("class", "r_stl_container_row")));
-            int intra_j = 0;
+            }*/
+            result.HTMLAppendTagPrefix("div", "class", "r_stl_row");
+            //int intra_j = 0;
 			foreach j in lines[i]
 			{
 				string entry = lines[i][j];
-                if (intra_j > 0)
+                /*if (intra_j > 0)
                 {
-                    result.append(HTMLGenerateDivOfClass("", "r_stl_entry r_stl_spacer"));
-                    last_cell_count += 1;
-                }
-				result.append(HTMLGenerateDivOfClass(entry, "r_stl_entry"));
-                last_cell_count += 1;
+                    //result.HTMLAppendDivOfClass("", "r_stl_entry r_stl_spacer");
+                    //last_cell_count += 1;
+                }*/
+                string class_name = "r_stl_entry";
+                if (j == lines[i].count() - 1)
+                	class_name += " r_stl_entry_last_column";
+                if (i == lines.count() - 1)
+                	class_name += " r_stl_entry_last_row";
+				result.HTMLAppendDivOfClass(entry, class_name);
+                //last_cell_count += 1;
                 
-                intra_j += 1;
+                //intra_j += 1;
 			}
 			
             result.append("</div>");
-            intra_i += 1;
+            //intra_i += 1;
 		}
         result.append("</div>");
 	}
@@ -4963,7 +5351,7 @@ string HTMLGenerateElementSpanDesaturated(element e)
     return HTMLGenerateElementSpanDesaturated(e, "");
 }
 
-string __bastille_version = "1.0.4";
+string __bastille_version = "1.0.5";
 
 Record BastilleState
 {
@@ -5198,6 +5586,14 @@ void main(string arguments)
 	
 	int [string] desired_configuration;
 	string [int] argument_words = arguments.to_lower_case().split_string_alternate(" ");
+	
+	//just set barbarians to maisntat by default:
+	if (my_primestat() == $stat[muscle])
+		desired_configuration["barb"] = 2;
+	else if (my_primestat() == $stat[mysticality])
+		desired_configuration["barb"] = 1;
+	else if (my_primestat() == $stat[moxie])
+		desired_configuration["barb"] = 3;
 	foreach key, word in argument_words
 	{
 		if (word == "barbecue" || word == "bbq" || word == "myst_stat" || word == "mysticality_stat")
