@@ -6,7 +6,7 @@ Installation
 ----------------
 Run this command in the graphical CLI:
 <pre>
-svn checkout https://github.com/Ezandora/Bastille/branches/Release/
+git checkout https://github.com/Ezandora/Bastille.git
 </pre>
 Will require [a recent build of KoLMafia](http://builds.kolmafia.us/job/Kolmafia/lastSuccessfulBuild/).
 
